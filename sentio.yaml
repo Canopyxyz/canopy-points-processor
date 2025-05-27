@@ -1,0 +1,16 @@
+# NOTE: the project name is configured when creating a project on the sentio dashboard
+# The format is as follows:
+# project: <sentio-account-username>/<sentio-project-name>
+project: canopy-sentio-indexer
+
+# project: solo-labs/canopy-aptos-mainnet
+# project: solo-labs/canopy-aptos-testnet
+# project: solo-labs/canopy-movement-porto-testnet
+
+contracts:
+  - chain: aptos_movement_mainnet
+    address: "0x4987720f700c4270ff416a1bced8d706282bb559e1b88c42901b2097ec964286"
+    name: oapp_single_asset
+  - chain: aptos_movement_mainnet
+    address: "0x3e56e3bdec22868d77346b1d4728302da8f6649eacbd8b67a05aa94130085abb"
+    name: oapp_dual_asset

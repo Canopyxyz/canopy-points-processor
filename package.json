@@ -1,0 +1,54 @@
+{
+  "private": true,
+  "name": "canopy-sentio-indexer",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "prepare": "husky",
+    "postinstall": "pnpm gen",
+    "precommit": "pnpm fmt && pnpm lint",
+    "build": "sentio build",
+    "gen": "pnpm gen:sentio && pnpm gen:surf",
+    "gen:sentio": "sentio gen",
+    "gen:surf": "tsx ./scripts/abigen.ts",
+    "test": "sentio test",
+    "upload": "sentio upload",
+    "lint": "eslint '**/*.{ts,tsx}'",
+    "fmt": "prettier --write '**/*.(ts|tsx)'"
+  },
+  "dependencies": {
+    "@sentio/sdk": "2.58.4",
+    "@thalalabs/surf": "^1.7.3",
+    "colorette": "^2.0.20",
+    "decimal.js": "^10.4.3",
+    "dotenv": "^16.4.7",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.16.0",
+    "@jest/globals": "^29.7.0",
+    "@sentio/cli": "2.26.1",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "corepack": "^0.29.4",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "globals": "^15.13.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "lint-staged": {
+    "*": "pnpm lint"
+  },
+  "packageManager": "pnpm@9.12.3+sha512.cce0f9de9c5a7c95bef944169cc5dfe8741abfb145078c0d508b868056848a87c81e626246cb60967cbd7fd29a6c062ef73ff840d96b3c86c40ac92cf4a813ee"
+}

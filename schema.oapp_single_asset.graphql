@@ -1,0 +1,56 @@
+# - - - Event Entities - - -
+
+"""
+Event: OApp message processing event
+"""
+type SingleAssetMessageProcessingEvent @entity {
+  # transaction_version-event_index
+  id: ID!
+
+  # The trace code indicating execution path
+  trace_code: Int! @index
+
+  # The message type that was processed
+  message_type: BigInt! @index
+
+  # The address from which the message originated
+  from: String! @index
+
+  # Transaction version
+  transaction_version: BigInt! @index
+
+  # Event sequence number within the transaction
+  event_index: Int! @index
+
+  # Event timestamp (unix seconds)
+  timestamp: BigInt! @index
+}
+
+"""
+Global statistics for message processing
+"""
+type SingleAssetMessageProcessingStats @entity {
+  # Singleton ID
+  id: ID!
+
+  # Total number of messages processed
+  total_message_count: Int!
+
+  # Count of type 1 messages (claim config)
+  claim_config_count: Int!
+
+  # Count of type 2 messages (batch contribution)
+  batch_contribution_count: Int!
+
+  # Count of invalid message types
+  invalid_message_type_count: Int!
+
+  # Count of messages that were too short
+  message_too_short_count: Int!
+
+  # Count of messages with decode failures
+  decode_failure_count: Int!
+
+  # Last update timestamp (unix seconds)
+  last_update_time: BigInt!
+}
