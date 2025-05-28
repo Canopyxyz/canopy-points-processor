@@ -1,0 +1,161 @@
+# ===== Canopy Vault Entities =====
+
+"""
+Represents a Canopy vault instance
+"""
+type Vault @entity {
+  # Vault object ID (from VaultCreated event)
+  id: ID!
+
+  # Timestamp when the vault was created (unix seconds)
+  createdAt: BigInt! @index
+
+  # Fungible asset metadata object ID for vault shares
+  sharesMetadata: String! @index
+
+  # Transaction version where this vault was created
+  createdAtVersion: BigInt! @index
+
+  # Relationships
+  storeBalances: [StoreBalance!]! @derivedFrom(field: "vault")
+}
+
+"""
+Global statistics for Canopy vaults
+"""
+type VaultStats @entity {
+  # Singleton ID (always "global")
+  id: ID!
+
+  # Total number of vaults created
+  totalVaultCount: Int!
+
+  # Last update timestamp (unix seconds)
+  lastUpdateTime: BigInt!
+}
+
+# ===== Fungible Asset Entities =====
+
+"""
+Cache for fungible_store metadata lookups to avoid repeated view calls
+"""
+type StoreMetadataCache @entity {
+  # Store address
+  id: ID!
+
+  # Fungible asset metadata address
+  metadata: String! @index
+
+  # Owner address (only set if this is a confirmed primary fungible_store)
+  owner: String @index
+
+  # Whether this fungible_store's metadata corresponds to a Canopy vault
+  isCanopyVault: Boolean! @index
+
+  # Reference to the Canopy vault (if applicable)
+  vault: Vault
+}
+
+"""
+Tracks balance for a specific vault-fungible_store combination
+"""
+type StoreBalance @entity {
+  # Composite ID: {vaultId}-{storeId}; NOTE: the storeId should be sufficient for an id
+  id: ID!
+
+  # The fungible store address
+  fungible_store: String! @index
+
+  # The vault this fungible_store holds shares for
+  vault: Vault!
+
+  # Current balance in the fungible_store
+  lastKnownBalance: BigInt!
+
+  # Last time the balance was observed (unix seconds)
+  lastObservationTime: BigInt! @index
+
+  # Relationships
+  balanceSnapshots: [BalanceSnapshot!]! @derivedFrom(field: "storeBalance")
+  transactions: [Transaction!]! @derivedFrom(field: "storeBalance")
+}
+
+"""
+Daily balance snapshot for historical tracking
+"""
+type BalanceSnapshot @entity {
+  # Composite ID: {storeBalanceId}-{dayTimestamp}
+  id: ID!
+
+  # Reference to the vault-fungible_store balance
+  storeBalance: StoreBalance!
+
+  # Day timestamp (unix seconds, normalized to start of day)
+  dayTimestamp: BigInt! @index
+
+  # Balance at the end of this day (or last known balance)
+  balance: BigInt!
+
+  # Last update time within this day (unix seconds)
+  lastUpdateTime: BigInt!
+}
+
+"""
+Individual deposit or withdrawal transaction
+"""
+type Transaction @entity {
+  # Composite ID: {transactionVersion}-{eventIndex}
+  id: ID!
+
+  # Reference to the vault-fungible_store balance this affects
+  storeBalance: StoreBalance!
+
+  # Transaction signer address
+  signer: String! @index
+
+  # Timestamp when this transaction occurred (unix seconds)
+  timestamp: BigInt! @index
+
+  # Type of transaction
+  type: TransactionType! @index
+
+  # Amount of tokens deposited or withdrawn
+  amount: BigInt!
+
+  # Transaction version for ordering
+  transactionVersion: BigInt! @index
+
+  # Event index within the transaction
+  eventIndex: Int!
+}
+
+"""
+Transaction type enumeration
+"""
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+}
+
+"""
+Global statistics for fungible asset processing
+"""
+type FungibleAssetStats @entity {
+  # Singleton ID (always "global")
+  id: ID!
+
+  # Total number of deposits processed
+  totalDepositCount: Int!
+
+  # Total number of withdrawals processed
+  totalWithdrawCount: Int!
+
+  # Number of unique stores tracked
+  uniqueStoreCount: Int!
+
+  # Number of stores with Canopy vault shares
+  canopyVaultStoreCount: Int!
+
+  # Last update timestamp (unix seconds)
+  lastUpdateTime: BigInt!
+}

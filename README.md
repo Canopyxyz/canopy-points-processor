@@ -48,6 +48,14 @@ echo "export const ABI = $(curl https://fullnode.$NETWORK.aptoslabs.com/v1/accou
 # Alternatively, you can run the following command to get the complete JSON ABI of all modules at a specified address
 
 curl https://fullnode.$NETWORK.aptoslabs.com/v1/accounts/$CONTRACT_ADDRESS/modules > abi.json
+
+# Or to get the ABI of only a single module in a JSON file:
+
+curl https://fullnode.$NETWORK.aptoslabs.com/v1/accounts/$CONTRACT_ADDRESS/module/$MODULE_NAME > $MODULE_NAME.json
+
+# IMPORTANT: the JSON abi in the ./abis folder should be wrapped in an array i.e. []
+# IMPORTANT: for events that do NOT end in "Event" you'll have to set "isEvent": true in the event struct ABI for codegen to treat it as an event struct
+# IMPORTANT: if the ABI depends on other module ABIs and you don't load those ABIs as well then if those ABIs are non-essential you can reduce/minimize the core ABI
 ```
 
 ### More Preferred Way
