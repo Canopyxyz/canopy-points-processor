@@ -12,6 +12,7 @@
     "gen:sentio": "sentio gen",
     "gen:surf": "tsx ./scripts/abigen.ts",
     "test": "sentio test",
+    "to": "sentio test --test-only",
     "upload": "sentio upload",
     "lint": "eslint '**/*.{ts,tsx}'",
     "fmt": "prettier --write '**/*.(ts|tsx)'"
