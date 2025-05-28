@@ -46,13 +46,10 @@ type StoreMetadataCache @entity {
   # Fungible asset metadata address
   metadata: String! @index
 
-  # Owner address (only set if this is a confirmed primary fungible_store)
-  owner: String @index
-
   # Whether this fungible_store's metadata corresponds to a Canopy vault
   isCanopyVault: Boolean! @index
 
-  # Reference to the Canopy vault (if applicable)
+  # Reference to the Canopy vault (if it is a canopy vault)
   vault: Vault
 }
 
@@ -60,7 +57,7 @@ type StoreMetadataCache @entity {
 Tracks balance for a specific vault-fungible_store combination
 """
 type StoreBalance @entity {
-  # Composite ID: {vaultId}-{storeId}; NOTE: the storeId should be sufficient for an id
+  # Store address
   id: ID!
 
   # The fungible store address
@@ -75,28 +72,37 @@ type StoreBalance @entity {
   # Last time the balance was observed (unix seconds)
   lastObservationTime: BigInt! @index
 
+  # Cumulative balance * seconds up to lastObservationTime
+  cumulativeBalanceSeconds: BigInt!
+
+  # Total number of snapshots created for this store
+  totalSnapshotCount: Int!
+
   # Relationships
   balanceSnapshots: [BalanceSnapshot!]! @derivedFrom(field: "storeBalance")
   transactions: [Transaction!]! @derivedFrom(field: "storeBalance")
 }
 
 """
-Daily balance snapshot for historical tracking
+Balance snapshot with ~24 hour lifetime for historical tracking
 """
 type BalanceSnapshot @entity {
-  # Composite ID: {storeBalanceId}-{dayTimestamp}
+  # Composite ID: {storeBalanceId}-{snapshotCount}
   id: ID!
 
   # Reference to the vault-fungible_store balance
   storeBalance: StoreBalance!
 
-  # Day timestamp (unix seconds, normalized to start of day)
-  dayTimestamp: BigInt! @index
+  # Timestamp when this snapshot was first created (unix seconds)
+  filledAt: BigInt! @index
 
-  # Balance at the end of this day (or last known balance)
+  # last balance in this snapshot period
   balance: BigInt!
 
-  # Last update time within this day (unix seconds)
+  # Cumulative balance * seconds up to lastUpdateTime
+  cumulativeBalanceSeconds: BigInt!
+
+  # Last update time within this snapshot period (unix seconds)
   lastUpdateTime: BigInt!
 }
 

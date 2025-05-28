@@ -12,11 +12,14 @@ import {
 } from "../schema/schema.js";
 
 import { fungible_asset as fungible_asset_movement } from "../types/aptos/movement-mainnet/aptos_std.js";
-import { getTimestampInSeconds, normalizeToDayTimestamp } from "../utils/helpers.js";
+import { getTimestampInSeconds } from "../utils/helpers.js";
 
 import { SupportedAptosChainId } from "../chains.js";
 
 type FungibleAssetProcessor = typeof fungible_asset_movement;
+
+// Constants
+const SNAPSHOT_LIFETIME_SECONDS = BigInt(24 * 60 * 60); // 24 hours
 
 // Core processor setup
 export function canopyVaultShareFungibleAssetProcessor(
@@ -84,28 +87,10 @@ async function processBalanceChange(
 
       const isCanopyVault = vaults.length > 0; // should be length 1 i.e. only 1 vault
 
-      // Determine if this is a primary store
-      let owner: string | undefined = undefined;
-      if (isCanopyVault) {
-        // Check if this store is the signer's primary store
-        const primaryStoreResult = await client.view({
-          payload: {
-            function: "0x1::primary_fungible_store::primary_store_address",
-            functionArguments: [signer, metadataAddress],
-          },
-        });
-
-        const primaryStoreAddress = primaryStoreResult[0]?.toString();
-        if (primaryStoreAddress === storeAddress) {
-          owner = signer;
-        }
-      }
-
       // Create cache entry
       storeMetadata = new StoreMetadataCache({
         id: storeAddress,
         metadata: metadataAddress,
-        owner: owner,
         isCanopyVault: isCanopyVault,
         vaultID: isCanopyVault ? vaults[0].id : undefined,
       });
@@ -125,23 +110,29 @@ async function processBalanceChange(
   const canopyVault = (await storeMetadata.vault())!;
 
   // Get or create StoreBalance
-  const storeBalanceId = `${canopyVault.id}-${storeAddress}`;
-  let storeBalance = await store.get(StoreBalance, storeBalanceId);
+  let storeBalance = await store.get(StoreBalance, storeAddress);
 
   if (!storeBalance) {
-    // First time seeing this store-vault combination
+    // First time seeing this store
     storeBalance = new StoreBalance({
-      id: storeBalanceId,
+      id: storeAddress,
       fungible_store: storeAddress,
       vaultID: canopyVault.id,
       lastKnownBalance: BigInt(0),
       lastObservationTime: timestamp,
+      cumulativeBalanceSeconds: BigInt(0),
+      totalSnapshotCount: 0,
     });
 
     // Update unique store count
     stats.uniqueStoreCount += 1;
     stats.canopyVaultStoreCount += 1;
   }
+
+  // Calculate cumulative balance-seconds before updating balance
+  const timeDelta = timestamp - storeBalance.lastObservationTime;
+  const additionalBalanceSeconds = storeBalance.lastKnownBalance * timeDelta;
+  storeBalance.cumulativeBalanceSeconds = storeBalance.cumulativeBalanceSeconds + additionalBalanceSeconds;
 
   // Update balance based on transaction type
   const previousBalance = storeBalance.lastKnownBalance;
@@ -157,7 +148,7 @@ async function processBalanceChange(
   // Create transaction record
   const transaction = new Transaction({
     id: `${ctx.version}-${ctx.eventIndex}`,
-    storeBalanceID: storeBalance.id,
+    storeBalanceID: storeAddress,
     signer: signer,
     timestamp: timestamp,
     type: transactionType,
@@ -166,21 +157,39 @@ async function processBalanceChange(
     eventIndex: ctx.eventIndex,
   });
 
-  // Update or create daily snapshot
-  const dayTimestamp = normalizeToDayTimestamp(timestamp);
-  const snapshotId = `${storeBalanceId}-${dayTimestamp}`;
-  let snapshot = await store.get(BalanceSnapshot, snapshotId);
+  // Handle snapshot creation/update
+  let snapshot: BalanceSnapshot | undefined;
+
+  // Get the most recent snapshot if it exists
+  if (storeBalance.totalSnapshotCount > 0) {
+    const currentSnapshotId = `${storeAddress}-${storeBalance.totalSnapshotCount}`;
+    snapshot = await store.get(BalanceSnapshot, currentSnapshotId);
+
+    // Check if we need a new snapshot (current one is older than 24 hours)
+    if (snapshot && timestamp - snapshot.filledAt > SNAPSHOT_LIFETIME_SECONDS) {
+      snapshot = undefined; // Force creation of new snapshot
+    }
+  }
 
   if (!snapshot) {
+    // Create new snapshot
+    storeBalance.totalSnapshotCount += 1;
     snapshot = new BalanceSnapshot({
-      id: snapshotId,
-      storeBalanceID: storeBalance.id,
-      dayTimestamp: dayTimestamp,
+      id: `${storeAddress}-${storeBalance.totalSnapshotCount}`,
+      storeBalanceID: storeAddress,
+      filledAt: timestamp,
       balance: storeBalance.lastKnownBalance,
+      cumulativeBalanceSeconds: storeBalance.cumulativeBalanceSeconds,
       lastUpdateTime: timestamp,
     });
   } else {
     // Update existing snapshot
+    // First update cumulative balance-seconds for the snapshot
+    const snapshotTimeDelta = timestamp - snapshot.lastUpdateTime;
+    const snapshotAdditionalBalanceSeconds = snapshot.balance * snapshotTimeDelta;
+    snapshot.cumulativeBalanceSeconds = snapshot.cumulativeBalanceSeconds + snapshotAdditionalBalanceSeconds;
+
+    // Then update balance and timestamp
     snapshot.balance = storeBalance.lastKnownBalance;
     snapshot.lastUpdateTime = timestamp;
   }
