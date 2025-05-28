@@ -3,7 +3,7 @@ import assert from "assert";
 import { Vault, VaultStats } from "../../../schema/schema.js";
 
 import { TestProcessorServer } from "@sentio/sdk/testing";
-import { Address } from "../../common/types.js";
+import { Address } from "../../../utils/types.js";
 
 // Verify Vault entity state
 export async function verifyVaultEntity(

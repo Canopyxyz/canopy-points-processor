@@ -15,6 +15,8 @@ import { fungible_asset as fungible_asset_movement } from "../types/aptos/moveme
 import { getTimestampInSeconds } from "../utils/helpers.js";
 
 import { SupportedAptosChainId } from "../chains.js";
+import { getSender, getVersionForViewCall } from "./t-state.js";
+import { MoveObjectType } from "../utils/types.js";
 
 type FungibleAssetProcessor = typeof fungible_asset_movement;
 
@@ -31,6 +33,7 @@ export function canopyVaultShareFungibleAssetProcessor(
     .bind({ startVersion })
     .onEventDeposit(async (event, ctx) => {
       await processBalanceChange(
+        supportedChainId,
         event.data_decoded.store.toString(),
         event.data_decoded.amount,
         TransactionType.DEPOSIT,
@@ -39,6 +42,7 @@ export function canopyVaultShareFungibleAssetProcessor(
     })
     .onEventWithdraw(async (event, ctx) => {
       await processBalanceChange(
+        supportedChainId,
         event.data_decoded.store.toString(),
         event.data_decoded.amount,
         TransactionType.WITHDRAW,
@@ -49,6 +53,7 @@ export function canopyVaultShareFungibleAssetProcessor(
 
 // Main processing function for both deposits and withdrawals
 async function processBalanceChange(
+  chainId: SupportedAptosChainId,
   storeAddress: string,
   amount: bigint,
   transactionType: TransactionType,
@@ -56,7 +61,7 @@ async function processBalanceChange(
 ): Promise<void> {
   const store = ctx.store;
   const timestamp = getTimestampInSeconds(ctx.getTimestamp());
-  const signer = ctx.transaction.sender;
+  const signer = getSender(chainId, ctx);
 
   // Check if we have cached metadata for this store
   let storeMetadata = await store.get(StoreMetadataCache, storeAddress);
@@ -72,11 +77,15 @@ async function processBalanceChange(
       const result = await client.view({
         payload: {
           function: "0x1::fungible_asset::store_metadata",
+          typeArguments: ["0x1::fungible_asset::FungibleStore"],
           functionArguments: [storeAddress],
+        },
+        options: {
+          ledgerVersion: getVersionForViewCall(chainId),
         },
       });
 
-      const metadataAddress = result[0]?.toString();
+      const metadataAddress = (result[0] as unknown as MoveObjectType).inner;
 
       if (!metadataAddress) {
         throw new Error("UNEXPECTED: store_metadata returned no FA metadata");

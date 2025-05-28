@@ -1,4 +1,4 @@
-import { Address } from "../../common/types.js";
+import { Address } from "../../../utils/types.js";
 
 type Store = {
   store: Address;

@@ -1,0 +1,14 @@
+{
+  "aptos_movement_mainnet": {
+    "ChainServer": "https://mainnet.movementnetwork.xyz"
+  },
+  "aptos_mainnet": {
+    "ChainServer": "https://fullnode.mainnet.aptoslabs.com"
+  },
+  "aptos_testnet": {
+    "ChainServer": "https://fullnode.testnet.aptoslabs.com"
+  },
+  "56": {
+    "ChainServer": "https://bsc-dataseed.binance.org"
+  }
+}
