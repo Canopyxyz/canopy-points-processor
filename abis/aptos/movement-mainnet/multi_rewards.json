@@ -913,6 +913,7 @@
         {
           "name": "StakeEvent",
           "is_native": false,
+          "is_event": true,
           "abilities": [
             "drop",
             "store"
@@ -1107,6 +1108,7 @@
         {
           "name": "WithdrawEvent",
           "is_native": false,
+          "is_event": true,
           "abilities": [
             "drop",
             "store"

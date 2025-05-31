@@ -1,7 +1,11 @@
 import { GLOBAL_CONFIG } from "@sentio/runtime";
 
 import { getSupportedAptosChainId, SupportedAptosChainId } from "./chains.js";
-import { setupCanopyVaultProcessor, setupCanopyVaultShareFungibleAssetProcessor } from "./config.js";
+import {
+  setupCanopyVaultProcessor,
+  setupCanopyVaultShareFungibleAssetProcessor,
+  setupCanopyVaultShareMultiRewardsProcessor,
+} from "./config.js";
 
 const { CHAIN_ID } = process.env;
 
@@ -43,6 +47,7 @@ switch (supportedChainId) {
 
     setupCanopyVaultProcessor(supportedChainId);
     setupCanopyVaultShareFungibleAssetProcessor(supportedChainId);
+    setupCanopyVaultShareMultiRewardsProcessor(supportedChainId);
     break;
   }
   default: {

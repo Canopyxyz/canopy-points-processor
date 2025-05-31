@@ -200,6 +200,8 @@ type StakingBalance @entity {
   # The vault this staking position is for (always set since we only track Canopy vault shares)
   vault: Vault!
 
+  # TODO: consider adding a field for the primary fungible store address(though maybe unnecessary if it's precomputable?)
+
   # Current staked balance
   lastKnownBalance: BigInt!
 
