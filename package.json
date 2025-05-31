@@ -12,12 +12,13 @@
     "gen:sentio": "sentio gen",
     "gen:surf": "tsx ./scripts/abigen.ts",
     "test": "sentio test",
+    "to": "sentio test --test-only",
     "upload": "sentio upload",
     "lint": "eslint '**/*.{ts,tsx}'",
     "fmt": "prettier --write '**/*.(ts|tsx)'"
   },
   "dependencies": {
-    "@sentio/sdk": "2.58.4",
+    "@sentio/sdk": "2.58.7",
     "@thalalabs/surf": "^1.7.3",
     "colorette": "^2.0.20",
     "decimal.js": "^10.4.3",

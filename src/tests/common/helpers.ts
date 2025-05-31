@@ -1,4 +1,4 @@
-import { Address } from "./types.js";
+import { Address } from "../../utils/types.js";
 
 export function generateRandomAddress(): Address {
   const bytes = new Array(32);
