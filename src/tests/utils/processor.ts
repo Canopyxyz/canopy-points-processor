@@ -26,7 +26,7 @@ export class TestProcessor<TABITable extends ABITable = DefaultABITable, TABI ex
   async processEvent<TEventName extends EventName<TABI>>(params: {
     name: TEventName;
     data: EventFields<TABITable, TABI, TEventName>;
-    timestamp?: bigint;
+    timestamp?: bigint; // in micros
     version?: bigint;
     eventIndex?: number;
     sender?: Address;
@@ -54,7 +54,7 @@ export class TestProcessor<TABITable extends ABITable = DefaultABITable, TABI ex
   private buildEvent<TEventName extends EventName<TABI>>(params: {
     name: TEventName;
     data: EventFields<TABITable, TABI, TEventName>;
-    timestamp?: bigint;
+    timestamp?: bigint; // in micros
     version?: bigint;
     eventIndex?: number;
   }) {

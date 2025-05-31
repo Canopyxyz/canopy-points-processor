@@ -16,6 +16,9 @@ type NonCanopyShareFA = {
   someValidStores: Store[];
 };
 
+// NOTE: we use actual valid addresses on Movement mainnet as the Deposit and Withdraw event handlers make a view call
+// and in order for that call to succeed valid data should be used
+
 export const SoloDeployerAddress = "0xbee7f0e5192c31d6fd4c90c83d567230ee23cbc2f10138a89c231e40c05bee13";
 export const SatayManagerAddress = "0x5858accdba70476b7026878f84c2d74af6a8f5b5a3f60bc45ddf2b12dc46626d";
 

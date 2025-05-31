@@ -66,9 +66,6 @@ async function processBalanceChange(
   // Check if we have cached metadata for this store
   let storeMetadata = await store.get(StoreMetadataCache, storeAddress);
 
-  // Get or create stats
-  const stats = await getOrCreateFungibleAssetStats(store, timestamp);
-
   if (!storeMetadata) {
     // Cache miss - need to make view call
     const client = ctx.getClient();
@@ -81,6 +78,9 @@ async function processBalanceChange(
           functionArguments: [storeAddress],
         },
         options: {
+          // TODO: suggest improvement to @sentio/sdk where if null is specified for ledgerVersion
+          // then definitely use latest for version if we for example know that a view call returns
+          // a value that is effectively constant/immutable and using latest is the least computationally intensive on the rpc node
           ledgerVersion: getVersionForViewCall(chainId),
         },
       });
@@ -115,6 +115,8 @@ async function processBalanceChange(
   if (!storeMetadata.isCanopyVault) {
     return;
   }
+
+  const stats = await getOrCreateFungibleAssetStats(store, timestamp);
 
   const canopyVault = (await storeMetadata.vault())!;
 
