@@ -18,6 +18,7 @@ type Vault @entity {
 
   # Relationships
   storeBalances: [StoreBalance!]! @derivedFrom(field: "vault")
+  stakingBalances: [StakingBalance!]! @derivedFrom(field: "vault")
 }
 
 """
@@ -161,6 +162,139 @@ type FungibleAssetStats @entity {
 
   # Number of stores with Canopy vault shares
   canopyVaultStoreCount: Int!
+
+  # Last update timestamp (unix seconds)
+  lastUpdateTime: BigInt!
+}
+
+# ===== Multi-Rewards Staking Entities =====
+
+"""
+Represents a user in the staking system
+"""
+type User @entity {
+  # User address
+  id: ID!
+
+  # Timestamp when user first interacted with the system (unix seconds)
+  firstSeenAt: BigInt! @index
+
+  # Relationships
+  stakingBalances: [StakingBalance!]! @derivedFrom(field: "user")
+  stakingTransactions: [StakingTransaction!]! @derivedFrom(field: "user")
+}
+
+"""
+Tracks staking balance for a specific user-vault combination
+"""
+type StakingBalance @entity {
+  # Composite ID: {userAddress}-{tokenMetadataAddress}
+  id: ID!
+
+  # The user who owns this staking position
+  user: User!
+
+  # The staking token metadata address
+  stakingToken: String! @index
+
+  # The vault this staking position is for (always set since we only track Canopy vault shares)
+  vault: Vault!
+
+  # Current staked balance
+  lastKnownBalance: BigInt!
+
+  # Last time the balance was observed (unix seconds)
+  lastObservationTime: BigInt! @index
+
+  # Cumulative balance * seconds up to lastObservationTime
+  cumulativeBalanceSeconds: BigInt!
+
+  # Total number of snapshots created for this staking position
+  totalSnapshotCount: Int!
+
+  # Relationships
+  stakingSnapshots: [StakingSnapshot!]! @derivedFrom(field: "stakingBalance")
+  stakingTransactions: [StakingTransaction!]! @derivedFrom(field: "stakingBalance")
+}
+
+"""
+Staking balance snapshot with ~24 hour lifetime for historical tracking
+"""
+type StakingSnapshot @entity {
+  # Composite ID: {stakingBalanceId}-{snapshotCount}
+  id: ID!
+
+  # Reference to the user-vault staking balance
+  stakingBalance: StakingBalance!
+
+  # Timestamp when this snapshot was first created (unix seconds)
+  filledAt: BigInt! @index
+
+  # last balance in this snapshot period
+  balance: BigInt!
+
+  # Cumulative balance * seconds up to lastUpdateTime
+  cumulativeBalanceSeconds: BigInt!
+
+  # Last update time within this snapshot period (unix seconds)
+  lastUpdateTime: BigInt!
+}
+
+"""
+Individual stake or unstake transaction
+"""
+type StakingTransaction @entity {
+  # Composite ID: {transactionVersion}-{eventIndex}
+  id: ID!
+
+  # Reference to the user-vault staking balance this affects
+  stakingBalance: StakingBalance!
+
+  # Reference to the user for easier querying
+  user: User!
+
+  # Timestamp when this transaction occurred (unix seconds)
+  timestamp: BigInt! @index
+
+  # Type of staking transaction
+  type: StakingTransactionType! @index
+
+  # Amount of tokens staked or unstaked
+  amount: BigInt!
+
+  # Transaction version for ordering
+  transactionVersion: BigInt! @index
+
+  # Event index within the transaction
+  eventIndex: Int!
+}
+
+"""
+Staking transaction type enumeration
+"""
+enum StakingTransactionType {
+  STAKE
+  UNSTAKE
+}
+
+"""
+Global statistics for staking processing
+"""
+type StakingStats @entity {
+  # Singleton ID (always "global")
+  id: ID!
+
+  # Total number of stake events processed
+  totalStakeCount: Int!
+
+  # Total number of unstake events processed
+  totalUnstakeCount: Int!
+
+  # Number of unique users who have staked
+  uniqueUserCount: Int!
+
+  # Number of users with Canopy vault staking positions
+  canopyVaultStakerCount: Int!
 
   # Last update timestamp (unix seconds)
   lastUpdateTime: BigInt!
