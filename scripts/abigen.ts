@@ -54,7 +54,8 @@ interface AbiEntry {
 }
 
 async function generateAbiTypes() {
-  const inputDir = path.join(process.cwd(), "abis", "aptos", "testnet");
+  // TODO: replace "aptos" and "testnet" with appropriate path for relevant network
+  const inputDir = path.join(process.cwd(), "abis", "aptos", "movement-mainnet");
   const outputDir = path.join(process.cwd(), "src", "abis");
 
   // Ensure output directory exists

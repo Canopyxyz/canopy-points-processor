@@ -1,4 +1,20 @@
-# Canopy Sentio Processors
+# Canopy Points System - Sentio Processor
+
+This Sentio processor tracks user positions in Canopy vaults on the Movement network to support a points rewards program. It monitors on-chain events related to canopy vault creation and fungible asset operations (deposits/withdrawals), storing balance data optimized for efficient time-weighted average calculations.
+
+The processor uses a cumulative balance-seconds approach that enables O(log n) computation of average balances between any two arbitrary timestamps, making it ideal for flexible points calculations based on time-weighted holdings.
+
+## Components
+
+- **Vault Processor**: Tracks creation of new Canopy vaults and maintains global vault statistics
+- **Fungible Asset Processor**: Monitors deposits and withdrawals of vault shares, maintaining cumulative balance-seconds data with lazy snapshot creation
+
+## Key Features
+
+- **Efficient Average Balance Queries**: Pre-computed cumulative values enable fast calculation of time-weighted average balances
+- **Lazy Snapshot System**: Snapshots are created with ~24-hour lifetimes to reduce storage overhead while maintaining query precision
+- **Metadata Caching**: Reduces RPC calls by caching fungible store metadata lookups
+- **Global Statistics**: Tracks system-wide metrics for monitoring and analytics
 
 ## Prerequisites
 
@@ -48,6 +64,14 @@ echo "export const ABI = $(curl https://fullnode.$NETWORK.aptoslabs.com/v1/accou
 # Alternatively, you can run the following command to get the complete JSON ABI of all modules at a specified address
 
 curl https://fullnode.$NETWORK.aptoslabs.com/v1/accounts/$CONTRACT_ADDRESS/modules > abi.json
+
+# Or to get the ABI of only a single module in a JSON file:
+
+curl https://fullnode.$NETWORK.aptoslabs.com/v1/accounts/$CONTRACT_ADDRESS/module/$MODULE_NAME > $MODULE_NAME.json
+
+# IMPORTANT: the JSON abi in the ./abis folder should be wrapped in an array i.e. []
+# IMPORTANT: for events that do NOT end in "Event" you'll have to set "isEvent": true in the event struct ABI for codegen to treat it as an event struct
+# IMPORTANT: if the ABI depends on other module ABIs and you don't load those ABIs as well then if those ABIs are non-essential you can reduce/minimize the core ABI
 ```
 
 ### More Preferred Way

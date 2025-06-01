@@ -4,6 +4,8 @@ import { DataBinding, HandlerType, ProcessBindingResponse } from "@sentio/sdk";
 import { ABIRoot } from "../../pkgs/surf/types/abi.js";
 import { ABITable, DefaultABITable } from "../../pkgs/surf/types/defaultABITable.js";
 import { EventName, EventFields } from "./types.js";
+import { Address } from "../../utils/types.js";
+import { setTestSender } from "../../processors/t-state.js";
 
 // import { multi_rewards_abi } from "../../abis/multi-rewards-testnet.js";
 
@@ -24,13 +26,19 @@ export class TestProcessor<TABITable extends ABITable = DefaultABITable, TABI ex
   async processEvent<TEventName extends EventName<TABI>>(params: {
     name: TEventName;
     data: EventFields<TABITable, TABI, TEventName>;
-    timestamp?: bigint;
+    timestamp?: bigint; // in micros
     version?: bigint;
+    eventIndex?: number;
+    sender?: Address;
   }): Promise<ProcessBindingResponse> {
     // 1. Validate event exists in ABI
     const event = this.abi.structs.find((s) => s.is_event && s.name === params.name);
     if (!event) {
       throw new Error(`Event ${params.name} not found in ABI`);
+    }
+
+    if (params.sender) {
+      setTestSender(params.sender);
     }
 
     // 2. Build APT event with proper metadata
@@ -46,8 +54,9 @@ export class TestProcessor<TABITable extends ABITable = DefaultABITable, TABI ex
   private buildEvent<TEventName extends EventName<TABI>>(params: {
     name: TEventName;
     data: EventFields<TABITable, TABI, TEventName>;
-    timestamp?: bigint;
+    timestamp?: bigint; // in micros
     version?: bigint;
+    eventIndex?: number;
   }) {
     this.versionCounter++;
     this.latestTimestampMicros = params.timestamp || this.latestTimestampMicros;
@@ -60,6 +69,7 @@ export class TestProcessor<TABITable extends ABITable = DefaultABITable, TABI ex
       sequence_number: this.versionCounter,
       type: `${this.abi.address}::${this.abi.name}::${params.name}`,
       version: params.version ?? this.versionCounter,
+      eventIndex: params.eventIndex,
       data: params.data, // Type-safe from EventFields
     };
   }
@@ -80,7 +90,7 @@ export class TestProcessor<TABITable extends ABITable = DefaultABITable, TABI ex
       data: {
         aptEvent: {
           rawEvent: JSON.stringify(event),
-          eventIndex: 0,
+          eventIndex: event.eventIndex || 0,
           rawTransaction: JSON.stringify({
             version: event.version,
             timestamp: this.latestTimestampMicros,

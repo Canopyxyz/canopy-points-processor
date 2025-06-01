@@ -1,7 +1,11 @@
 import { GLOBAL_CONFIG } from "@sentio/runtime";
 
 import { getSupportedAptosChainId, SupportedAptosChainId } from "./chains.js";
-import { setupDualAssetProcessor, setupSingleAssetProcessor } from "./config.js";
+import {
+  setupCanopyVaultProcessor,
+  setupCanopyVaultShareFungibleAssetProcessor,
+  setupCanopyVaultShareMultiRewardsProcessor,
+} from "./config.js";
 
 const { CHAIN_ID } = process.env;
 
@@ -41,8 +45,9 @@ switch (supportedChainId) {
   case SupportedAptosChainId.MOVEMENT_MAINNET: {
     // Movement mainnet has modules to be indexed by the following processors
 
-    setupSingleAssetProcessor(supportedChainId)
-    setupDualAssetProcessor(supportedChainId)
+    setupCanopyVaultProcessor(supportedChainId);
+    setupCanopyVaultShareFungibleAssetProcessor(supportedChainId);
+    setupCanopyVaultShareMultiRewardsProcessor(supportedChainId);
     break;
   }
   default: {
