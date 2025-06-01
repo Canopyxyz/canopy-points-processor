@@ -121,8 +121,8 @@ To find the average balance between timestamps `t1` and `t2`:
         }
     }
 
-   const cumulative1 = getCumulativeAt(t1, beforeOrAt_t1, after_t1);
-   const cumulative2 = getCumulativeAt(t2, beforeOrAt_t2, after_t2);
+   const cumulative1 = getCumulativeAt(t1, beforeOrAt_t1, priorTo_beforeOrAt_t1);
+   const cumulative2 = getCumulativeAt(t2, beforeOrAt_t2, priorTo_beforeOrAt_t2);
    ```
 
 3. **Calculate Average**:
