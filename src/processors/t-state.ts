@@ -14,13 +14,3 @@ export function getSender(chainId: SupportedAptosChainId, ctx: AptosContext): Ad
 export function setTestSender(address: Address) {
   testSender = address;
 }
-
-// - - -
-
-export function getVersionForViewCall(chainId: SupportedAptosChainId) {
-  if (chainId === SupportedAptosChainId.JESTNET) {
-    return 4972760; // TODO: this is the effective latest version which is adequate for testing
-  } else {
-    return undefined; // i.e. should be latest on sentio.xyz runtime
-  }
-}

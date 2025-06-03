@@ -22,10 +22,11 @@ type NonCanopyShareFA = {
 export const SoloDeployerAddress = "0xbee7f0e5192c31d6fd4c90c83d567230ee23cbc2f10138a89c231e40c05bee13";
 export const SatayManagerAddress = "0x5858accdba70476b7026878f84c2d74af6a8f5b5a3f60bc45ddf2b12dc46626d";
 
+// NOTE: all addresses should be 0 padded
 export const canopyVaultInfos: CanopyVaultInfo[] = [
   {
     vaultAddress: "0xf8e39a8e9f492f4e0e2b5e79d4a17f0358ca01165372a0bb2642023ca2c21971", // rsETH Echelon vault
-    vaultShareAddress: "0x95a1771f3c4569ca57c1e1a55e5b7f985028ba698e7f7b37bc3d582c1cfff6f",
+    vaultShareAddress: "0x095a1771f3c4569ca57c1e1a55e5b7f985028ba698e7f7b37bc3d582c1cfff6f",
     someValidStores: [
       {
         store: "0x96adbf3e3de38f106b2fe4e419aaa23b18fc55b36728d65598d8f2542f47f830",
@@ -39,7 +40,7 @@ export const canopyVaultInfos: CanopyVaultInfo[] = [
   },
   {
     vaultAddress: "0x1add335785489b1694db14df964790904058ee71c776589a2d35b948f0c679ec", // solvBTC Echelon vault
-    vaultShareAddress: "0x44d42a3b738a8d9a30de1082bd9e461286da0692b53fac8f0be5852407bcc7f",
+    vaultShareAddress: "0x044d42a3b738a8d9a30de1082bd9e461286da0692b53fac8f0be5852407bcc7f",
     someValidStores: [
       {
         store: "0xa01f78a2c48291101ffeba6933525c88475b5f0f10c9acc6eedca35aefc05adc",

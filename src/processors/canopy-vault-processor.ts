@@ -5,7 +5,7 @@ import { Vault, VaultStats } from "../schema/schema.js";
 import { vault as canopy_vault_movement } from "../types/aptos/movement-mainnet/satay.js";
 
 import { SupportedAptosChainId } from "../chains.js";
-import { getTimestampInSeconds } from "../utils/helpers.js";
+import { getTimestampInSeconds, padAptosAddress } from "../utils/helpers.js";
 
 type CanopyVaultProcessor = typeof canopy_vault_movement;
 
@@ -19,11 +19,14 @@ export function canopyVaultProcessor(
     const store = ctx.store;
     const timestamp = getTimestampInSeconds(ctx.getTimestamp());
 
+    const vaultAddress = padAptosAddress(event.data_decoded.vault);
+    const vaultSharesAddress = padAptosAddress(event.data_decoded.shares_metadata);
+
     // Create new Vault entity
     const vaultEntity = new Vault({
-      id: event.data_decoded.vault.toString(),
+      id: vaultAddress,
       createdAt: timestamp,
-      sharesMetadata: event.data_decoded.shares_metadata.toString(),
+      sharesMetadata: vaultSharesAddress,
       createdAtVersion: BigInt(ctx.version),
     });
 

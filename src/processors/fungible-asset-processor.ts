@@ -1,4 +1,4 @@
-import { AptosContext } from "@sentio/sdk/aptos";
+import { AptosContext, LATEST_LEDGER_VERSION } from "@sentio/sdk/aptos";
 import { Store } from "@sentio/sdk/store";
 
 import {
@@ -12,10 +12,10 @@ import {
 } from "../schema/schema.js";
 
 import { fungible_asset as fungible_asset_movement } from "../types/aptos/movement-mainnet/aptos_std.js";
-import { getTimestampInSeconds } from "../utils/helpers.js";
+import { getTimestampInSeconds, padAptosAddress } from "../utils/helpers.js";
 
 import { SupportedAptosChainId } from "../chains.js";
-import { getSender, getVersionForViewCall } from "./t-state.js";
+import { getSender } from "./t-state.js";
 import { MoveObjectType } from "../utils/types.js";
 
 type FungibleAssetProcessor = typeof fungible_asset_movement;
@@ -34,7 +34,7 @@ export function canopyVaultShareFungibleAssetProcessor(
     .onEventDeposit(async (event, ctx) => {
       await processBalanceChange(
         supportedChainId,
-        event.data_decoded.store.toString(),
+        padAptosAddress(event.data_decoded.store),
         event.data_decoded.amount,
         TransactionType.DEPOSIT,
         ctx,
@@ -43,7 +43,7 @@ export function canopyVaultShareFungibleAssetProcessor(
     .onEventWithdraw(async (event, ctx) => {
       await processBalanceChange(
         supportedChainId,
-        event.data_decoded.store.toString(),
+        padAptosAddress(event.data_decoded.store),
         event.data_decoded.amount,
         TransactionType.WITHDRAW,
         ctx,
@@ -69,46 +69,46 @@ async function processBalanceChange(
   if (!storeMetadata) {
     // Cache miss - need to make view call
     const client = ctx.getClient();
+    let metadataAddress: string;
 
-    try {
-      const result = await client.view({
-        payload: {
-          function: "0x1::fungible_asset::store_metadata",
-          typeArguments: ["0x1::fungible_asset::FungibleStore"],
-          functionArguments: [storeAddress],
-        },
-        options: {
-          // TODO: suggest improvement to @sentio/sdk where if null is specified for ledgerVersion
-          // then definitely use latest for version if we for example know that a view call returns
-          // a value that is effectively constant/immutable and using latest is the least computationally intensive on the rpc node
-          ledgerVersion: getVersionForViewCall(chainId),
-        },
-      });
-
-      const metadataAddress = (result[0] as unknown as MoveObjectType).inner;
-
-      if (!metadataAddress) {
-        throw new Error("UNEXPECTED: store_metadata returned no FA metadata");
+    // Try latest version first, fallback to context version
+    for (const ledgerVersion of [LATEST_LEDGER_VERSION, undefined]) {
+      try {
+        const result = await client.view({
+          payload: {
+            function: "0x1::fungible_asset::store_metadata",
+            typeArguments: ["0x1::fungible_asset::FungibleStore"],
+            functionArguments: [storeAddress],
+          },
+          ...(ledgerVersion !== undefined && { options: { ledgerVersion } }),
+        });
+        metadataAddress = padAptosAddress((result[0] as unknown as MoveObjectType).inner);
+        break; // Success, exit loop
+      } catch (error) {
+        if (ledgerVersion === undefined) throw error; // Re-throw on final attempt
+        // Otherwise, continue to next iteration
+        console.warn(`view failed on latest FungibleStore has likely been deleted: ${storeAddress}`)
       }
-
-      // Check if this metadata corresponds to a Canopy vault
-      const vaults = await store.list(Vault, [{ field: "sharesMetadata", op: "=", value: metadataAddress }]);
-
-      const isCanopyVault = vaults.length > 0; // should be length 1 i.e. only 1 vault
-
-      // Create cache entry
-      storeMetadata = new StoreMetadataCache({
-        id: storeAddress,
-        metadata: metadataAddress,
-        isCanopyVault: isCanopyVault,
-        vaultID: isCanopyVault ? vaults[0].id : undefined,
-      });
-
-      await store.upsert(storeMetadata);
-    } catch (error) {
-      console.error(`Failed to get metadata for store ${storeAddress}:`, error);
-      return;
     }
+
+    if (!metadataAddress!) {
+      throw new Error("UNEXPECTED: store_metadata returned no FA metadata");
+    }
+
+    // Check if this metadata corresponds to a Canopy vault
+    const vaults = await store.list(Vault, [{ field: "sharesMetadata", op: "=", value: metadataAddress }]);
+
+    const isCanopyVault = vaults.length > 0; // should be length 1 i.e. only 1 vault
+
+    // Create cache entry
+    storeMetadata = new StoreMetadataCache({
+      id: storeAddress,
+      metadata: metadataAddress,
+      isCanopyVault: isCanopyVault,
+      vaultID: isCanopyVault ? vaults[0].id : undefined,
+    });
+
+    await store.upsert(storeMetadata);
   }
 
   // Only process if this is a Canopy vault share

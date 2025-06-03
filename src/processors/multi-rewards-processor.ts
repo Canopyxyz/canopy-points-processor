@@ -14,10 +14,8 @@ import {
 import { multi_rewards as multi_rewards_movement } from "../types/aptos/movement-mainnet/multi_rewards.js";
 
 import { SupportedAptosChainId } from "../chains.js";
-import { getSender, getVersionForViewCall } from "./t-state.js";
 
-import { getTimestampInSeconds } from "../utils/helpers.js";
-import { MoveObjectType } from "../utils/types.js";
+import { getTimestampInSeconds, padAptosAddress } from "../utils/helpers.js";
 
 type MultiRewardsProcessor = typeof multi_rewards_movement;
 
@@ -35,8 +33,8 @@ export function canopyMultiRewardsProcessor(
     .onEventStakeEvent(async (event, ctx) => {
       await processStakingChange(
         supportedChainId,
-        event.data_decoded.user.toString(),
-        event.data_decoded.staking_token.toString(),
+        padAptosAddress(event.data_decoded.user),
+        padAptosAddress(event.data_decoded.staking_token),
         event.data_decoded.amount,
         StakingTransactionType.STAKE,
         ctx,
@@ -45,8 +43,8 @@ export function canopyMultiRewardsProcessor(
     .onEventWithdrawEvent(async (event, ctx) => {
       await processStakingChange(
         supportedChainId,
-        event.data_decoded.user.toString(),
-        event.data_decoded.staking_token.toString(),
+        padAptosAddress(event.data_decoded.user),
+        padAptosAddress(event.data_decoded.staking_token),
         event.data_decoded.amount,
         StakingTransactionType.UNSTAKE,
         ctx,
