@@ -20,6 +20,15 @@ import { MoveObjectType } from "../utils/types.js";
 
 type FungibleAssetProcessor = typeof fungible_asset_movement;
 
+type FungibleAssetInstance = InstanceType<FungibleAssetProcessor>;
+
+// Extract the event types from the instance methods
+type DepositEventHandler = Parameters<FungibleAssetInstance["onEventDeposit"]>[0];
+type DepositEvent = Parameters<DepositEventHandler>[0];
+
+type WithdrawEventHandler = Parameters<FungibleAssetInstance["onEventWithdraw"]>[0];
+type WithdrawEvent = Parameters<WithdrawEventHandler>[0];
+
 // Constants
 const SNAPSHOT_LIFETIME_SECONDS = BigInt(24 * 60 * 60); // 24 hours
 
@@ -31,24 +40,34 @@ export function canopyVaultShareFungibleAssetProcessor(
 ) {
   baseProcessor
     .bind({ startVersion })
-    .onEventDeposit(async (event, ctx) => {
-      await processBalanceChange(
-        supportedChainId,
-        padAptosAddress(event.data_decoded.store),
-        event.data_decoded.amount,
-        TransactionType.DEPOSIT,
-        ctx,
-      );
-    })
-    .onEventWithdraw(async (event, ctx) => {
-      await processBalanceChange(
-        supportedChainId,
-        padAptosAddress(event.data_decoded.store),
-        event.data_decoded.amount,
-        TransactionType.WITHDRAW,
-        ctx,
-      );
-    });
+    .onEventDeposit(
+      async (event, ctx) => {
+        await processBalanceChange(
+          supportedChainId,
+          padAptosAddress(event.data_decoded.store),
+          event.data_decoded.amount,
+          TransactionType.DEPOSIT,
+          ctx,
+        );
+      },
+      {
+        partitionKey: (event: DepositEvent) => event.data_decoded.store,
+      },
+    )
+    .onEventWithdraw(
+      async (event, ctx) => {
+        await processBalanceChange(
+          supportedChainId,
+          padAptosAddress(event.data_decoded.store),
+          event.data_decoded.amount,
+          TransactionType.WITHDRAW,
+          ctx,
+        );
+      },
+      {
+        partitionKey: (event: WithdrawEvent) => event.data_decoded.store,
+      },
+    );
 }
 
 // Main processing function for both deposits and withdrawals
@@ -59,6 +78,10 @@ async function processBalanceChange(
   transactionType: TransactionType,
   ctx: AptosContext,
 ): Promise<void> {
+  if (!ctx.transaction.success) {
+    // if a tx wasn't successful(and aborted) then this event was likely just for paying native fees
+    return;
+  }
   const store = ctx.store;
   const timestamp = getTimestampInSeconds(ctx.getTimestamp());
   const signer = getSender(chainId, ctx);
@@ -67,27 +90,35 @@ async function processBalanceChange(
   let storeMetadata = await store.get(StoreMetadataCache, storeAddress);
 
   if (!storeMetadata) {
-    // Cache miss - need to make view call
-    const client = ctx.getClient();
-    let metadataAddress: string;
+    let metadataAddress: string | null = null;
 
-    // Try latest version first, fallback to context version
-    for (const ledgerVersion of [LATEST_LEDGER_VERSION, undefined]) {
-      try {
-        const result = await client.view({
-          payload: {
-            function: "0x1::fungible_asset::store_metadata",
-            typeArguments: ["0x1::fungible_asset::FungibleStore"],
-            functionArguments: [storeAddress],
-          },
-          ...(ledgerVersion !== undefined && { options: { ledgerVersion } }),
-        });
-        metadataAddress = padAptosAddress((result[0] as unknown as MoveObjectType).inner);
-        break; // Success, exit loop
-      } catch (error) {
-        if (ledgerVersion === undefined) throw error; // Re-throw on final attempt
-        // Otherwise, continue to next iteration
-        console.warn(`view failed on latest FungibleStore has likely been deleted: ${storeAddress}`)
+    const onJestnet = chainId === SupportedAptosChainId.JESTNET;
+    if (!onJestnet) {
+      metadataAddress = extractMetadataFromChanges(ctx, storeAddress);
+    }
+
+    // If not found in changes and ONLY on JESTNET, fall back to view call
+    if (!metadataAddress && onJestnet) {
+      const client = ctx.getClient();
+
+      // Try latest version first, fallback to context version
+      for (const ledgerVersion of [LATEST_LEDGER_VERSION, undefined]) {
+        try {
+          const result = await client.view({
+            payload: {
+              function: "0x1::fungible_asset::store_metadata",
+              typeArguments: ["0x1::fungible_asset::FungibleStore"],
+              functionArguments: [storeAddress],
+            },
+            ...(ledgerVersion !== undefined && { options: { ledgerVersion } }),
+          });
+          metadataAddress = padAptosAddress((result[0] as unknown as MoveObjectType).inner);
+          break; // Success, exit loop
+        } catch (error) {
+          if (ledgerVersion === undefined) throw error; // Re-throw on final attempt
+          // Otherwise, continue to next iteration
+          console.warn(`view failed on latest FungibleStore has likely been deleted: ${storeAddress}`);
+        }
       }
     }
 
@@ -234,4 +265,57 @@ async function getOrCreateFungibleAssetStats(store: Store, timestamp: bigint): P
   }
 
   return stats;
+}
+
+interface FungibleStoreData {
+  balance: string;
+  frozen: boolean;
+  metadata: MoveObjectType;
+}
+
+// TODO: consider extending WriteSetChangeWriteResource from the sentio sdk
+interface WriteResourceChange {
+  type: "write_resource";
+  address: string;
+  state_key_hash: string;
+  data: {
+    type: string;
+    data: FungibleStoreData;
+  };
+}
+
+/**
+ * Extracts fungible asset metadata address from transaction changes
+ * @param ctx - The Aptos context containing transaction data
+ * @param storeAddress - The padded store address to look for
+ * @returns The padded metadata address if found, null otherwise
+ */
+function extractMetadataFromChanges(ctx: AptosContext, storeAddress: string): string | null {
+  // Ensure we have changes to search through
+  if (!ctx.transaction.changes || ctx.transaction.changes.length === 0) {
+    return null;
+  }
+
+  // Search through all changes
+  for (const change of ctx.transaction.changes) {
+    // Only interested in write_resource changes
+    if (change.type !== "write_resource") {
+      continue;
+    }
+
+    const writeChange = change as WriteResourceChange;
+
+    // Check if this is a FungibleStore change for our target address
+    if (
+      writeChange.data.type === "0x1::fungible_asset::FungibleStore" &&
+      padAptosAddress(writeChange.address) === storeAddress
+    ) {
+      // Extract and pad the metadata address
+      const metadataAddress = writeChange.data.data.metadata.inner;
+      return padAptosAddress(metadataAddress);
+    }
+  }
+
+  // Not found in changes
+  return null;
 }

@@ -9,7 +9,6 @@ import { vault_abi } from "../../../abis/satay.js";
 import { fungible_asset_abi } from "../../../abis/aptos_std.js";
 
 import { canopyVaultHandlerIds, canopyVaultShareFungibleAssetHandlerIds } from "../common/constants.js";
-import { nonCanopyShareFAs, canopyVaultInfos } from "../common/addresses.js";
 import { getVaultsInTimeRange, verifyVaultEntity, verifyVaultStats } from "../common/helpers.js";
 import { Vault } from "../../../schema/schema.js";
 

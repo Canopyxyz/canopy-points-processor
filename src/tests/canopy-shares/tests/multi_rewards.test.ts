@@ -14,31 +14,18 @@ import {
   canopyVaultShareFungibleAssetHandlerIds,
   canopyVaultShareMultiRewardsHandlerIds,
 } from "../common/constants.js";
-import { nonCanopyShareFAs, canopyVaultInfos, SoloDeployerAddress, SatayManagerAddress } from "../common/addresses.js";
-import {
-  User,
-  StakingBalance,
-  StakingSnapshot,
-  StakingTransaction,
-  StakingTransactionType,
-  StakingStats,
-  Vault,
-} from "../../../schema/schema.js";
+import { canopyVaultInfos, SoloDeployerAddress } from "../common/addresses.js";
+import { User, StakingBalance, StakingTransactionType, Vault } from "../../../schema/schema.js";
 
 import { setupTestEndpoints } from "../../common/config.js";
 
 import {
-  createStakeEventData,
-  createUnstakeEventData,
   processStakeEvent,
-  processUnstakeEvent,
   verifyUser,
   verifyStakingBalance,
   verifyStakingSnapshot,
   verifyStakingTransaction,
   verifyStakingStats,
-  verifyNoStakingEntities,
-  verifyNoStakingTransaction,
 } from "../common/multi-rewards-helpers.js";
 
 import { createVaultCreatedEventData } from "../common/helpers.js";
