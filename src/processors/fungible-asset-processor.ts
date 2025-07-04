@@ -51,6 +51,7 @@ export function canopyVaultShareFungibleAssetProcessor(
         );
       },
       {
+        // resourceChanges: true, // seems to below slower to get this info vs making a view call
         partitionKey: (event: DepositEvent) => event.data_decoded.store,
       },
     )
@@ -65,6 +66,7 @@ export function canopyVaultShareFungibleAssetProcessor(
         );
       },
       {
+        // resourceChanges: true,
         partitionKey: (event: WithdrawEvent) => event.data_decoded.store,
       },
     );
@@ -97,8 +99,9 @@ async function processBalanceChange(
       metadataAddress = extractMetadataFromChanges(ctx, storeAddress);
     }
 
-    // If not found in changes and ONLY on JESTNET, fall back to view call
-    if (!metadataAddress && onJestnet) {
+    // Normally we'd only do this if not found in changes and ONLY on JESTNET
+    // however there doesn't seem to be much of a speed improvement to get the resource changes vs just making a view call
+    if (!metadataAddress) {
       const client = ctx.getClient();
 
       // Try latest version first, fallback to context version
