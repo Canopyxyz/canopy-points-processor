@@ -78,10 +78,10 @@ async function processBalanceChange(
   transactionType: TransactionType,
   ctx: AptosContext,
 ): Promise<void> {
-  if (!ctx.transaction.success) {
-    // if a tx wasn't successful(and aborted) then this event was likely just for paying native fees
-    return;
-  }
+  // if (!ctx.transaction.success) {
+  //   // if a tx wasn't successful(and aborted) then this event was likely just for paying native fees
+  //   return;
+  // }
   const store = ctx.store;
   const timestamp = getTimestampInSeconds(ctx.getTimestamp());
   const signer = getSender(chainId, ctx);
@@ -291,6 +291,17 @@ interface WriteResourceChange {
  * @returns The padded metadata address if found, null otherwise
  */
 function extractMetadataFromChanges(ctx: AptosContext, storeAddress: string): string | null {
+  // Debug logging for Sentio team
+  console.log(`[DEBUG] extractMetadataFromChanges called for store: ${storeAddress}`);
+  console.log(`[DEBUG] Transaction version: ${ctx.transaction.version}`);
+  console.log(`[DEBUG] Transaction hash: ${ctx.transaction.hash}`);
+  console.log(
+    `[DEBUG] ctx.transaction.changes is: ${ctx.transaction.changes === null ? "null" : ctx.transaction.changes === undefined ? "undefined" : `array with ${ctx.transaction.changes.length} items`}`,
+  );
+
+  // Log the raw transaction object structure for debugging
+  console.log(`[DEBUG] ctx.transaction keys: ${Object.keys(ctx.transaction).join(", ")}`);
+
   // Ensure we have changes to search through
   if (!ctx.transaction.changes || ctx.transaction.changes.length === 0) {
     return null;
